@@ -25,98 +25,93 @@
 #include <yarp/dev/RGBDSensorParamParser.h>
 #include <librealsense2/rs.hpp>
 
-
-class realsense2Driver :
-        public yarp::dev::DeviceDriver,
-        public yarp::dev::IFrameGrabberControls,
-        public yarp::dev::IFrameGrabberImageRaw,
-        public yarp::dev::IRGBDSensor
+class realsense2Driver : public yarp::dev::DeviceDriver,
+                         public yarp::dev::IFrameGrabberControls,
+                         public yarp::dev::IFrameGrabberImageRaw,
+                         public yarp::dev::IRGBDSensor
 {
 private:
     typedef yarp::sig::ImageOf<yarp::sig::PixelFloat> depthImage;
-    typedef yarp::os::Stamp                           Stamp;
-    typedef yarp::os::Property                        Property;
-    typedef yarp::sig::FlexImage                      FlexImage;
-
+    typedef yarp::os::Stamp Stamp;
+    typedef yarp::os::Property Property;
+    typedef yarp::sig::FlexImage FlexImage;
 
 public:
     realsense2Driver();
     ~realsense2Driver() override = default;
 
     // DeviceDriver
-    bool open(yarp::os::Searchable& config) override;
+    bool open(yarp::os::Searchable &config) override;
     bool close() override;
 
     // IRGBDSensor
-    int    getRgbHeight() override;
-    int    getRgbWidth() override;
-    bool   getRgbSupportedConfigurations(yarp::sig::VectorOf<yarp::dev::CameraConfig> &configurations) override;
-    bool   getRgbResolution(int &width, int &height) override;
-    bool   setRgbResolution(int width, int height) override;
-    bool   getRgbFOV(double& horizontalFov, double& verticalFov) override;
-    bool   setRgbFOV(double horizontalFov, double verticalFov) override;
-    bool   getRgbMirroring(bool& mirror) override;
-    bool   setRgbMirroring(bool mirror) override;
+    int getRgbHeight() override;
+    int getRgbWidth() override;
+    bool getRgbSupportedConfigurations(yarp::sig::VectorOf<yarp::dev::CameraConfig> &configurations) override;
+    bool getRgbResolution(int &width, int &height) override;
+    bool setRgbResolution(int width, int height) override;
+    bool getRgbFOV(double &horizontalFov, double &verticalFov) override;
+    bool setRgbFOV(double horizontalFov, double verticalFov) override;
+    bool getRgbMirroring(bool &mirror) override;
+    bool setRgbMirroring(bool mirror) override;
 
-    bool   getRgbIntrinsicParam(Property& intrinsic) override;
-    int    getDepthHeight() override;
-    int    getDepthWidth() override;
-    bool   setDepthResolution(int width, int height) override;
-    bool   getDepthFOV(double& horizontalFov, double& verticalFov) override;
-    bool   setDepthFOV(double horizontalFov, double verticalFov) override;
-    bool   getDepthIntrinsicParam(Property& intrinsic) override;
+    bool getRgbIntrinsicParam(Property &intrinsic) override;
+    int getDepthHeight() override;
+    int getDepthWidth() override;
+    bool setDepthResolution(int width, int height) override;
+    bool getDepthFOV(double &horizontalFov, double &verticalFov) override;
+    bool setDepthFOV(double horizontalFov, double verticalFov) override;
+    bool getDepthIntrinsicParam(Property &intrinsic) override;
     double getDepthAccuracy() override;
-    bool   setDepthAccuracy(double accuracy) override;
-    bool   getDepthClipPlanes(double& nearPlane, double& farPlane) override;
-    bool   setDepthClipPlanes(double nearPlane, double farPlane) override;
-    bool   getDepthMirroring(bool& mirror) override;
-    bool   setDepthMirroring(bool mirror) override;
+    bool setDepthAccuracy(double accuracy) override;
+    bool getDepthClipPlanes(double &nearPlane, double &farPlane) override;
+    bool setDepthClipPlanes(double nearPlane, double farPlane) override;
+    bool getDepthMirroring(bool &mirror) override;
+    bool setDepthMirroring(bool mirror) override;
 
+    bool getExtrinsicParam(yarp::sig::Matrix &extrinsic) override;
+    bool getRgbImage(FlexImage &rgbImage, Stamp *timeStamp = nullptr) override;
+    bool getDepthImage(depthImage &depthImage, Stamp *timeStamp = nullptr) override;
+    bool getImages(FlexImage &colorFrame, depthImage &depthFrame, Stamp *colorStamp = NULL, Stamp *depthStamp = NULL) override;
 
-    bool   getExtrinsicParam(yarp::sig::Matrix &extrinsic) override;
-    bool   getRgbImage(FlexImage& rgbImage, Stamp* timeStamp = nullptr) override;
-    bool   getDepthImage(depthImage& depthImage, Stamp* timeStamp = nullptr) override;
-    bool   getImages(FlexImage& colorFrame, depthImage& depthFrame, Stamp* colorStamp=NULL, Stamp* depthStamp=NULL) override;
+    RGBDSensor_status getSensorStatus() override;
+    std::string getLastErrorMsg(Stamp *timeStamp = NULL) override;
 
-    RGBDSensor_status     getSensorStatus() override;
-    std::string getLastErrorMsg(Stamp* timeStamp = NULL) override;
+    // IFrameGrabberControls
+    bool getCameraDescription(CameraDescriptor *camera) override;
+    bool hasFeature(int feature, bool *hasFeature) override;
+    bool setFeature(int feature, double value) override;
+    bool getFeature(int feature, double *value) override;
+    bool setFeature(int feature, double value1, double value2) override;
+    bool getFeature(int feature, double *value1, double *value2) override;
+    bool hasOnOff(int feature, bool *HasOnOff) override;
+    bool setActive(int feature, bool onoff) override;
+    bool getActive(int feature, bool *isActive) override;
+    bool hasAuto(int feature, bool *hasAuto) override;
+    bool hasManual(int feature, bool *hasManual) override;
+    bool hasOnePush(int feature, bool *hasOnePush) override;
+    bool setMode(int feature, FeatureMode mode) override;
+    bool getMode(int feature, FeatureMode *mode) override;
+    bool setOnePush(int feature) override;
 
-    //IFrameGrabberControls
-    bool   getCameraDescription(CameraDescriptor *camera) override;
-    bool   hasFeature(int feature, bool*   hasFeature) override;
-    bool   setFeature(int feature, double  value) override;
-    bool   getFeature(int feature, double* value) override;
-    bool   setFeature(int feature, double  value1,  double  value2) override;
-    bool   getFeature(int feature, double* value1,  double* value2) override;
-    bool   hasOnOff(  int feature, bool*   HasOnOff) override;
-    bool   setActive( int feature, bool    onoff) override;
-    bool   getActive( int feature, bool*   isActive) override;
-    bool   hasAuto(   int feature, bool*   hasAuto) override;
-    bool   hasManual( int feature, bool*   hasManual) override;
-    bool   hasOnePush(int feature, bool*   hasOnePush) override;
-    bool   setMode(   int feature, FeatureMode mode) override;
-    bool   getMode(   int feature, FeatureMode *mode) override;
-    bool   setOnePush(int feature) override;
-
-    //IFrameGrabberImageRaw
-    bool getImage(yarp::sig::ImageOf<yarp::sig::PixelMono>& image) override;
+    // IFrameGrabberImageRaw
+    bool getImage(yarp::sig::ImageOf<yarp::sig::PixelMono> &image) override;
     int height() const override;
     int width() const override;
 
 protected:
-    //method
+    // method
     inline bool initializeRealsenseDevice();
     inline bool setParams();
 
-    bool        getImage(FlexImage& Frame, Stamp* timeStamp, rs2::frameset& sourceFrame);
-    bool        getImage(depthImage& Frame, Stamp* timeStamp, const rs2::frameset& sourceFrame);
-    void        updateTransformations();
-    bool        pipelineStartup();
-    bool        pipelineShutdown();
-    bool        pipelineRestart();
-    bool        setFramerate(const int _fps);
-    void        fallback();
-
+    bool getImage(FlexImage &Frame, Stamp *timeStamp, rs2::frameset &sourceFrame);
+    bool getImage(depthImage &Frame, Stamp *timeStamp, const rs2::frameset &sourceFrame);
+    void updateTransformations();
+    bool pipelineStartup();
+    bool pipelineShutdown();
+    bool pipelineRestart();
+    bool setFramerate(const int _fps);
+    void fallback();
 
     // realsense classes
     mutable std::mutex m_mutex;
@@ -124,18 +119,17 @@ protected:
     rs2::config m_cfg;
     rs2::pipeline m_pipeline;
     rs2::pipeline_profile m_profile;
-    rs2::device  m_device;
+    rs2::device m_device;
     std::vector<rs2::sensor> m_sensors;
-    rs2::sensor* m_depth_sensor;
-    rs2::sensor* m_color_sensor;
+    rs2::sensor *m_depth_sensor;
+    rs2::sensor *m_color_sensor;
     rs2_intrinsics m_depth_intrin{}, m_color_intrin{}, m_infrared_intrin{};
     rs2_extrinsics m_depth_to_color{}, m_color_to_depth{};
-    rs2_stream  m_alignment_stream{RS2_STREAM_COLOR};
-
+    rs2_stream m_alignment_stream{RS2_STREAM_COLOR};
 
     // Data quantization related parameters
-    bool                             m_depthQuantizationEnabled{false};
-    int                              m_depthDecimalNum{0};
+    bool m_depthQuantizationEnabled{false};
+    int m_depthDecimalNum{0};
 
     yarp::os::Stamp m_rgb_stamp;
     yarp::os::Stamp m_depth_stamp;
@@ -149,5 +143,8 @@ protected:
     float m_scale;
     bool m_rotateImage180{false};
     std::vector<cameraFeature_id_t> m_supportedFeatures;
+
+    rs2::decimation_filter m_dec_filter; // Decimation - reduces depth frame density
+    rs2::spatial_filter m_spat_filter;   // Spatial    - edge-preserving spatial smoothing
 };
 #endif
