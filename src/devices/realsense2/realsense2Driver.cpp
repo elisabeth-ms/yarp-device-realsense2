@@ -797,11 +797,16 @@ bool realsense2Driver::open(Searchable &config)
         yCError(REALSENSE2) << "Failed to initialize the realsense device";
         return false;
     }
+
     m_dec_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, 2.0);
     m_spat_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, 2.0);
     m_spat_filter.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.5);
-    m_spat_filter.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 20.0);
+    m_spat_filter.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 40.0);
     m_spat_filter.set_option(RS2_OPTION_HOLES_FILL, float(3));
+    m_temporal_filter.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.4);
+    m_temporal_filter.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 30.0);
+    // m_temporal_filter.set_option(RS2_OPTION_HOLES_FILL, float(2));
+
     // setting Parameters
     return setParams();
 }
@@ -1114,9 +1119,10 @@ bool realsense2Driver::getImage(depthImage &Frame, Stamp *timeStamp, const rs2::
     rs2::depth_frame depth_frm = sourceFrame.get_depth_frame();
     rs2_format format = depth_frm.get_profile().format();
 
-    // rs2::frame filtered = depth_frm;   // Does not copy the frame, only adds a reference
-    // filtered = m_dec_filter.process(filtered);
-    // filtered = m_spat_filter.process(filtered);
+    rs2::frame filtered = depth_frm;   // Does not copy the frame, only adds a reference
+    filtered = m_dec_filter.process(filtered);
+    filtered = m_spat_filter.process(filtered);
+    filtered = m_temporal_filter.process(filtered);
 
     int pixCode = pixFormatToCode(format);
 

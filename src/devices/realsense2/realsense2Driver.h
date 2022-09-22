@@ -146,5 +146,6 @@ protected:
 
     rs2::decimation_filter m_dec_filter; // Decimation - reduces depth frame density
     rs2::spatial_filter m_spat_filter;   // Spatial    - edge-preserving spatial smoothing
+    rs2::temporal_filter m_temporal_filter; //Temporal 
 };
 #endif
