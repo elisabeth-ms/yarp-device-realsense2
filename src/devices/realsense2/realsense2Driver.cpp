@@ -37,6 +37,7 @@ constexpr char framerate[] = "framerate";
 constexpr char enableEmitter[] = "enableEmitter";
 constexpr char needAlignment[] = "needAlignment";
 constexpr char alignmentFrame[] = "alignmentFrame";
+constexpr char decimationFilter[] ="decimationFilter";
 
 static std::map<std::string, RGBDSensorParamParser::RGBDParam> params_map =
     {
@@ -786,6 +787,68 @@ bool realsense2Driver::open(Searchable &config)
         m_stereoMode = config.find("stereoMode").asBool();
     }
 
+    // Manage decimationFilter param
+    yCInfo(REALSENSE2)<<"LETS CHECK FILTERS PARAMS";
+    yCInfo(REALSENSE2)<<"CONFIG: "<<config.toString();
+    if(config.check("POSTPROCESSING_FILTERS")){
+        yarp::os::Bottle & bPostprocessing = config.findGroup("POSTPROCESSING_FILTERS");
+        yCInfo(REALSENSE2)<<"POSTPROCESSING_FILTERS config found!!";
+        yarp::os::Bottle & bDecimationFilter = bPostprocessing.findGroup("decimationFilter");
+        if (!bDecimationFilter.isNull())
+        {
+            m_use_decimation_filter = true; 
+            yCInfo(REALSENSE2)<<"decimationFilter config found!!";
+            int magnitude = bDecimationFilter.check("magnitude", yarp::os::Value(2.0)).asInt32();
+            yCInfo(REALSENSE2)<<"Setting decimation filter magnitude to: "<<magnitude;
+            m_dec_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, float(magnitude));
+            
+        }
+        yarp::os::Bottle & bSpatialFilter = bPostprocessing.findGroup("spatialFilter");
+        if(!bSpatialFilter.isNull()){
+            m_use_spatial_filter = true;
+            yCInfo(REALSENSE2)<<"spatialFilter config found!!";
+
+            int magnitude = bSpatialFilter.check("magnitude", yarp::os::Value(2.0)).asInt32();
+            yCInfo(REALSENSE2)<<"Setting spatial filter magnitude to: "<<magnitude;
+            m_spat_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, float(magnitude));
+
+            float smoothAlpha = bSpatialFilter.check("smoothAlpha", yarp::os::Value(0.5)).asFloat32();
+            m_spat_filter.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, smoothAlpha);
+            yCInfo(REALSENSE2)<<"Setting spatial filter smooth alpha to: "<<smoothAlpha;
+           
+            float smoothDelta = bSpatialFilter.check("smoothDelta", yarp::os::Value(20.0)).asFloat32();
+            m_spat_filter.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, smoothDelta);
+            yCInfo(REALSENSE2)<<"Setting spatial filter smooth delta to: "<<smoothDelta;
+   
+            int holesFill = bSpatialFilter.check("holeFilling", yarp::os::Value(0.0)).asInt32();
+            m_spat_filter.set_option(RS2_OPTION_HOLES_FILL, float(holesFill));
+            yCInfo(REALSENSE2)<<"Setting spatial filter hole filling to: "<<holesFill;
+
+        }
+
+        yarp::os::Bottle & bTemporalFilter = bPostprocessing.findGroup("temporalFilter");
+        if(!bTemporalFilter.isNull()){
+            m_use_temporal_filter = true;
+
+            float smoothAlpha = bTemporalFilter.check("smoothAlpha", yarp::os::Value(0.5)).asFloat32();
+            m_temporal_filter.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, smoothAlpha);
+            yCInfo(REALSENSE2)<<"Setting temporal filter smooth alpha to: "<<smoothAlpha;
+
+            float smoothDelta = bTemporalFilter.check("smoothDelta", yarp::os::Value(20.0)).asFloat32();
+            m_temporal_filter.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, smoothDelta);
+            yCInfo(REALSENSE2)<<"Setting temporal filter smooth delta to: "<<smoothDelta;
+
+            float persistencyIndex = bTemporalFilter.check("persistencyIndex", yarp::os::Value(3.0)).asFloat32();
+            m_temporal_filter.set_option(RS2_OPTION_HOLES_FILL, float(persistencyIndex));
+            yCInfo(REALSENSE2)<<"Setting temporal filter persistency index: "<<persistencyIndex;
+            
+        }
+
+
+
+
+    }
+
     if (!m_paramParser.parseParam(config, params))
     {
         yCError(REALSENSE2) << "Failed to parse the parameters";
@@ -798,13 +861,13 @@ bool realsense2Driver::open(Searchable &config)
         return false;
     }
 
-    m_dec_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, 2.0);
-    m_spat_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, 2.0);
-    m_spat_filter.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.5);
-    m_spat_filter.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 40.0);
-    m_spat_filter.set_option(RS2_OPTION_HOLES_FILL, float(3));
-    m_temporal_filter.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.4);
-    m_temporal_filter.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 30.0);
+    // m_dec_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, 2.0);
+    // m_spat_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, 1.0);
+    // m_spat_filter.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.5);
+    // m_spat_filter.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 20.0);
+    // m_spat_filter.set_option(RS2_OPTION_HOLES_FILL, float(3));
+    // m_temporal_filter.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.4);
+    // m_temporal_filter.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 20.0);
     // m_temporal_filter.set_option(RS2_OPTION_HOLES_FILL, float(2));
 
     // setting Parameters
@@ -1120,9 +1183,12 @@ bool realsense2Driver::getImage(depthImage &Frame, Stamp *timeStamp, const rs2::
     rs2_format format = depth_frm.get_profile().format();
 
     rs2::frame filtered = depth_frm;   // Does not copy the frame, only adds a reference
-    filtered = m_dec_filter.process(filtered);
-    filtered = m_spat_filter.process(filtered);
-    filtered = m_temporal_filter.process(filtered);
+    if(m_use_decimation_filter)
+        filtered = m_dec_filter.process(filtered);
+    if(m_use_spatial_filter)
+        filtered = m_spat_filter.process(filtered);
+    if(m_use_temporal_filter)
+        filtered = m_temporal_filter.process(filtered);
 
     int pixCode = pixFormatToCode(format);
 

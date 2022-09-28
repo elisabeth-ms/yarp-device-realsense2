@@ -142,6 +142,10 @@ protected:
     int m_fps;
     float m_scale;
     bool m_rotateImage180{false};
+    bool m_use_decimation_filter = false;
+    bool m_use_spatial_filter = false;
+    bool m_use_temporal_filter = false; 
+
     std::vector<cameraFeature_id_t> m_supportedFeatures;
 
     rs2::decimation_filter m_dec_filter; // Decimation - reduces depth frame density
