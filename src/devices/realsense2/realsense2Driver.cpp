@@ -787,6 +787,7 @@ bool realsense2Driver::open(Searchable &config)
         m_stereoMode = config.find("stereoMode").asBool();
     }
 
+
     // Manage decimationFilter param
     yCInfo(REALSENSE2)<<"LETS CHECK FILTERS PARAMS";
     yCInfo(REALSENSE2)<<"CONFIG: "<<config.toString();
@@ -844,7 +845,7 @@ bool realsense2Driver::open(Searchable &config)
             
         }
 
-
+        
 
 
     }
@@ -855,11 +856,14 @@ bool realsense2Driver::open(Searchable &config)
         return false;
     }
 
+
     if (!initializeRealsenseDevice())
     {
         yCError(REALSENSE2) << "Failed to initialize the realsense device";
         return false;
     }
+    
+    m_depth_sensor->set_option(RS2_OPTION_VISUAL_PRESET, RS2_RS400_VISUAL_PRESET_HIGH_ACCURACY);
 
     // m_dec_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, 2.0);
     // m_spat_filter.set_option(RS2_OPTION_FILTER_MAGNITUDE, 1.0);
@@ -1185,10 +1189,14 @@ bool realsense2Driver::getImage(depthImage &Frame, Stamp *timeStamp, const rs2::
     rs2::frame filtered = depth_frm;   // Does not copy the frame, only adds a reference
     if(m_use_decimation_filter)
         filtered = m_dec_filter.process(filtered);
+    filtered = m_depth_to_disparity->process(filtered);
     if(m_use_spatial_filter)
         filtered = m_spat_filter.process(filtered);
     if(m_use_temporal_filter)
         filtered = m_temporal_filter.process(filtered);
+    filtered = m_disparity_to_depth->process(filtered);
+
+    
 
     int pixCode = pixFormatToCode(format);
 
